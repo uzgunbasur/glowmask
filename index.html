@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GlowAsk - Uzaktan Anonim Oyun</title>
+    <title>GlowAsk - Kişisel Anonim Soru Kutun</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
@@ -28,8 +28,11 @@
         .btn:hover { background: #ff007f; color: #05000a; box-shadow: 0 0 25px #ff007f; text-shadow: none; }
         .btn-blue { border-color: #00f0ff; color: #00f0ff; text-shadow: 0 0 5px #00f0ff; }
         .btn-blue:hover { background: #00f0ff; color: #05000a; box-shadow: 0 0 25px #00f0ff; text-shadow: none; }
-        .q-card { background: rgba(255, 255, 255, 0.05); border-left: 4px solid #ff007f; padding: 15px; margin-bottom: 15px; text-align: left; border-radius: 4px; }
-        .q-target { color: #00f0ff; font-weight: bold; margin-bottom: 5px; }
+        
+        .box-title { color: #ff007f; font-weight: bold; margin-top: 10px; margin-bottom: 15px; text-shadow: 0 0 5px #ff007f; text-transform: uppercase; }
+        .q-card { background: rgba(255, 255, 255, 0.05); border-left: 4px solid #00f0ff; padding: 15px; margin-bottom: 15px; text-align: left; border-radius: 4px; box-shadow: 0 0 10px rgba(0, 240, 255, 0.1); }
+        .q-text { color: #fff; font-size: 1.05rem; line-height: 1.4; }
+        .no-q { color: #666; font-style: italic; margin-top: 15px; }
     </style>
 
     <script type="importmap">
@@ -45,31 +48,33 @@
 
     <div class="container">
         <h1>GlowAsk</h1>
-        <p class="subtitle">Canlı & Uzaktan Anonim Soru</p>
+        <p class="subtitle">Sana Özel Anonim Kutu</p>
 
         <div id="panelRegister" class="panel active">
             <label for="regName">Oyundaki Nickin Nedir?</label>
-            <input type="text" id="regName" placeholder="Nickini yaz ve lobiye gir...">
-            <button class="btn btn-blue" id="btnJoin">Oyuna Katıl</button>
+            <input type="text" id="regName" placeholder="Nickini yaz ve kutunu aç...">
+            <button class="btn btn-blue" id="btnJoin">Giriş Yap</button>
         </div>
 
-        <div id="panelAsk" class="panel">
-            <label for="targetSelect">Kime Soru Soruyorsun?</label>
-            <select id="targetSelect">
-                <option value="" disabled selected>Oyuncular yükleniyor...</option>
-            </select>
-
-            <label for="questionText">Anonim Sorun:</label>
-            <textarea id="questionText" placeholder="Kimsenin bilmeyeceği o soruyu gönder..."></textarea>
+        <div id="panelMain" class="panel">
+            <h3 style="color: #00f0ff; margin-bottom: 20px;">Hoş geldin, <span id="currentMyNick" style="text-shadow: 0 0 8px #00f0ff;">-</span></h3>
             
-            <button class="btn" id="btnSend">Soruyu Gönder</button>
-            <p style="font-size: 0.8rem; margin-top: 15px; color: #555;">Sorular bittiğinde admin ekranı açacak.</p>
-        </div>
+            <div style="border-bottom: 1px dashed rgba(255,0,127,0.3); padding-bottom: 20px; margin-bottom: 25px;">
+                <label for="targetSelect">Kime Anonim Soru Soracaksın?</label>
+                <select id="targetSelect">
+                    <option value="" disabled selected>Oyuncular yükleniyor...</option>
+                </select>
 
-        <div id="panelAdmin" class="panel">
-            <h2 style="color: #ff007f; margin-bottom: 20px; text-shadow: 0 0 10px #ff007f;">GELEN TÜM SORULAR</h2>
-            <div id="questionsContainer"></div>
-            <button class="btn btn-blue" id="btnClear" style="margin-top: 20px; border-color: red; color: red;">Oyunu Sıfırla (Yeni Tur)</button>
+                <textarea id="questionText" placeholder="Kimsenin senin yazdığını bilmeyeceği o soruyu gönder..."></textarea>
+                <button class="btn" id="btnSend">Anonim Soru Gönder</button>
+            </div>
+
+            <div>
+                <div class="box-title">SANA GELEN ANONİM SORULAR</div>
+                <div id="myQuestionsContainer">
+                    <p class="no-q">Henüz sana sorulan bir soru yok...</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -93,38 +98,71 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
+        // Değişkenler
+        let myNick = "";
+
         // Elementler
         const btnJoin = document.getElementById('btnJoin');
         const btnSend = document.getElementById('btnSend');
-        const btnClear = document.getElementById('btnClear');
         const targetSelect = document.getElementById('targetSelect');
+        const currentMyNick = document.getElementById('currentMyNick');
+        const myQuestionsContainer = document.getElementById('myQuestionsContainer');
 
         function switchPanel(panelId) {
             document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
             document.getElementById(panelId).classList.add('active');
         }
 
-        // 1. NİCK KAYDETME (CANLI)
+        // 1. NİCK İLE GİRİŞ YAPMA
         btnJoin.addEventListener('click', () => {
             const nick = document.getElementById('regName').value.trim();
             if(!nick) { alert("Geçerli bir nick gir!"); return; }
 
-            const playersRef = ref(db, 'players/' + nick);
+            myNick = nick;
+            currentMyNick.innerText = myNick;
+
+            // Oyuncu listesine ekle
+            const playersRef = ref(db, 'players/' + myNick);
             set(playersRef, true).then(() => {
-                switchPanel('panelAsk');
+                switchPanel('panelMain');
+                dinlemeyeBasla(); // Giriş yaptıktan sonra verileri dinle
             }).catch(err => alert("Hata oluştu: " + err));
         });
 
-        // CANLI OYUNCU LİSTESİ GÜNCELLEME
-        onValue(ref(db, 'players'), (snapshot) => {
-            const data = snapshot.val();
-            targetSelect.innerHTML = '<option value="" disabled selected>Birini Seç...</option>';
-            if(data) {
-                Object.keys(data).forEach(player => {
-                    targetSelect.innerHTML += `<option value="${player}">${player}</option>`;
-                });
-            }
-        });
+        function dinlemeyeBasla() {
+            // OYUNCU LİSTESİNİ CANLI GÜNCELLE
+            onValue(ref(db, 'players'), (snapshot) => {
+                const data = snapshot.val();
+                targetSelect.innerHTML = '<option value="" disabled selected>Birini Seç...</option>';
+                if(data) {
+                    Object.keys(data).forEach(player => {
+                        // İnsanlar kendine soru sormasın diye kendi ismini listeden gizle
+                        if(player !== myNick) {
+                            targetSelect.innerHTML += `<option value="${player}">${player}</option>`;
+                        }
+                    });
+                }
+            });
+
+            // SADECE GİRİŞ YAPAN KİŞİYE AİT SORULARI CANLI DİNLE
+            onValue(ref(db, 'questions/' + myNick), (snapshot) => {
+                const data = snapshot.val();
+                myQuestionsContainer.innerHTML = "";
+
+                if(!data) {
+                    myQuestionsContainer.innerHTML = '<p class="no-q">Henüz sana sorulan bir soru yok...</p>';
+                } else {
+                    // Soruları listele
+                    Object.values(data).forEach(q => {
+                        myQuestionsContainer.innerHTML += `
+                            <div class="q-card">
+                                <div class="q-text">"${q.question}"</div>
+                            </div>
+                        `;
+                    });
+                }
+            });
+        }
 
         // 2. ANONİM SORU GÖNDERME
         btnSend.addEventListener('click', () => {
@@ -134,50 +172,17 @@
             if (!target) { alert("Kime soracağını seçmedin!"); return; }
             if (!text) { alert("Soruyu boş bırakamazsın!"); return; }
 
-            const questionsRef = ref(db, 'questions');
-            const newQuestionRef = push(questionsRef);
+            // Soruyu direkt hedef kişinin düğümünün (node) altına gönderiyoruz (Güvenli yapı)
+            const targetQuestionsRef = ref(db, 'questions/' + target);
+            const newQuestionRef = push(targetQuestionsRef);
+            
             set(newQuestionRef, {
-                to: target,
                 question: text
             }).then(() => {
                 document.getElementById('questionText').value = "";
                 targetSelect.selectedIndex = 0;
-                alert("Sorun anonim olarak gönderildi! Diğer sorularını da gönderebilirsin.");
+                alert("Sorun " + target + " isimli kişiye tamamen anonim olarak gönderildi!");
             });
-        });
-
-        // 3. ADMİN PANELİ: KLAVYEDEN "L" TUŞU
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'L' || e.key === 'l') {
-                onValue(ref(db, 'questions'), (snapshot) => {
-                    const data = snapshot.val();
-                    const container = document.getElementById('questionsContainer');
-                    container.innerHTML = "";
-
-                    if(!data) {
-                        container.innerHTML = "<p>Henüz hiç soru sorulmadı.</p>";
-                    } else {
-                        Object.values(data).forEach(q => {
-                            container.innerHTML += `
-                                <div class="q-card">
-                                    <div class="q-target">Kime: ${q.to}</div>
-                                    <div class="q-text">"${q.question}"</div>
-                                </div>
-                            `;
-                        });
-                    }
-                    switchPanel('panelAdmin');
-                });
-            }
-        });
-
-        // OYUNU SIFIRLAMA (YENİ TUR)
-        btnClear.addEventListener('click', () => {
-            if(confirm("Tüm oyuncuları ve soruları silmek istediğine emin misin?")) {
-                set(ref(db, '/'), null).then(() => {
-                    location.reload();
-                });
-            }
         });
     </script>
 </body>
