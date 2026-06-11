@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlowAsk - Uzaktan Anonim Oyun</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body {
+            background: radial-gradient(circle at center, #0d0116 0%, #05000a 100%);
+            color: #fff; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px;
+        }
+        .container {
+            background: rgba(13, 1, 22, 0.75); border: 2px solid #ff007f;
+            box-shadow: 0 0 20px #ff007f, inset 0 0 15px rgba(255, 0, 127, 0.3), 0 0 40px #00f0ff;
+            border-radius: 16px; padding: 40px; max-width: 500px; width: 100%; text-align: center; backdrop-filter: blur(10px);
+        }
+        h1 { font-size: 2.5rem; color: #00f0ff; text-shadow: 0 0 10px #00f0ff, 0 0 20px #00f0ff; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
+        p.subtitle { color: #ff007f; text-shadow: 0 0 8px #ff007f; font-size: 0.9rem; margin-bottom: 25px; font-weight: bold; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        label { display: block; margin-bottom: 8px; color: #00f0ff; text-align: left; font-weight: 600; }
+        input, select, textarea { width: 100%; padding: 12px; background: #120224; border: 2px solid #00f0ff; border-radius: 8px; color: #fff; font-size: 1rem; outline: none; margin-bottom: 20px; transition: all 0.3s; }
+        textarea { resize: none; height: 100px; border-color: #ff007f; }
+        input:focus, select:focus { box-shadow: 0 0 15px #00f0ff; }
+        textarea:focus { box-shadow: 0 0 15px #ff007f; }
+        .btn { width: 100%; padding: 14px; background: transparent; border: 2px solid #ff007f; color: #ff007f; border-radius: 8px; font-size: 1.1rem; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: all 0.3s ease; text-shadow: 0 0 5px #ff007f; }
+        .btn:hover { background: #ff007f; color: #05000a; box-shadow: 0 0 25px #ff007f; text-shadow: none; }
+        .btn-blue { border-color: #00f0ff; color: #00f0ff; text-shadow: 0 0 5px #00f0ff; }
+        .btn-blue:hover { background: #00f0ff; color: #05000a; box-shadow: 0 0 25px #00f0ff; text-shadow: none; }
+        .q-card { background: rgba(255, 255, 255, 0.05); border-left: 4px solid #ff007f; padding: 15px; margin-bottom: 15px; text-align: left; border-radius: 4px; }
+        .q-target { color: #00f0ff; font-weight: bold; margin-bottom: 5px; }
+    </style>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+          "firebase/database": "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"
+        }
+      }
+    </script>
+</head>
+<body>
+
+    <div class="container">
+        <h1>GlowAsk</h1>
+        <p class="subtitle">Canlı & Uzaktan Anonim Soru</p>
+
+        <div id="panelRegister" class="panel active">
+            <label for="regName">Oyundaki Nickin Nedir?</label>
+            <input type="text" id="regName" placeholder="Nickini yaz ve lobiye gir...">
+            <button class="btn btn-blue" id="btnJoin">Oyuna Katıl</button>
+        </div>
+
+        <div id="panelAsk" class="panel">
+            <label for="targetSelect">Kime Soru Soruyorsun?</label>
+            <select id="targetSelect">
+                <option value="" disabled selected>Oyuncular yükleniyor...</option>
+            </select>
+
+            <label for="questionText">Anonim Sorun:</label>
+            <textarea id="questionText" placeholder="Kimsenin bilmeyeceği o soruyu gönder..."></textarea>
+            
+            <button class="btn" id="btnSend">Soruyu Gönder</button>
+            <p style="font-size: 0.8rem; margin-top: 15px; color: #555;">Sorular bittiğinde admin ekranı açacak.</p>
+        </div>
+
+        <div id="panelAdmin" class="panel">
+            <h2 style="color: #ff007f; margin-bottom: 20px; text-shadow: 0 0 10px #ff007f;">GELEN TÜM SORULAR</h2>
+            <div id="questionsContainer"></div>
+            <button class="btn btn-blue" id="btnClear" style="margin-top: 20px; border-color: red; color: red;">Oyunu Sıfırla (Yeni Tur)</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "firebase/app";
+        import { getDatabase, ref, set, push, onValue } from "firebase/database";
+
+        // Senin projene özel Firebase Config bilgileri
+        const firebaseConfig = {
+            apiKey: "AIzaSyDaZ2RkRP_XEyBbWnBKvx9tUyOizIPkvUU",
+            authDomain: "glowask-c5c86.firebaseapp.com",
+            databaseURL: "https://glowask-c5c86-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "glowask-c5c86",
+            storageBucket: "glowask-c5c86.firebasestorage.app",
+            messagingSenderId: "773304465477",
+            appId: "1:773304465457:web:a22d1b05a38bf3976dbd10",
+            measurementId: "G-11YF9FFS4Z"
+        };
+
+        // Firebase Başlatma
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Elementler
+        const btnJoin = document.getElementById('btnJoin');
+        const btnSend = document.getElementById('btnSend');
+        const btnClear = document.getElementById('btnClear');
+        const targetSelect = document.getElementById('targetSelect');
+
+        function switchPanel(panelId) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+        }
+
+        // 1. NİCK KAYDETME (CANLI)
+        btnJoin.addEventListener('click', () => {
+            const nick = document.getElementById('regName').value.trim();
+            if(!nick) { alert("Geçerli bir nick gir!"); return; }
+
+            const playersRef = ref(db, 'players/' + nick);
+            set(playersRef, true).then(() => {
+                switchPanel('panelAsk');
+            }).catch(err => alert("Hata oluştu: " + err));
+        });
+
+        // CANLI OYUNCU LİSTESİ GÜNCELLEME
+        onValue(ref(db, 'players'), (snapshot) => {
+            const data = snapshot.val();
+            targetSelect.innerHTML = '<option value="" disabled selected>Birini Seç...</option>';
+            if(data) {
+                Object.keys(data).forEach(player => {
+                    targetSelect.innerHTML += `<option value="${player}">${player}</option>`;
+                });
+            }
+        });
+
+        // 2. ANONİM SORU GÖNDERME
+        btnSend.addEventListener('click', () => {
+            const target = targetSelect.value;
+            const text = document.getElementById('questionText').value.trim();
+
+            if (!target) { alert("Kime soracağını seçmedin!"); return; }
+            if (!text) { alert("Soruyu boş bırakamazsın!"); return; }
+
+            const questionsRef = ref(db, 'questions');
+            const newQuestionRef = push(questionsRef);
+            set(newQuestionRef, {
+                to: target,
+                question: text
+            }).then(() => {
+                document.getElementById('questionText').value = "";
+                targetSelect.selectedIndex = 0;
+                alert("Sorun anonim olarak gönderildi! Diğer sorularını da gönderebilirsin.");
+            });
+        });
+
+        // 3. ADMİN PANELİ: KLAVYEDEN "L" TUŞU
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'L' || e.key === 'l') {
+                onValue(ref(db, 'questions'), (snapshot) => {
+                    const data = snapshot.val();
+                    const container = document.getElementById('questionsContainer');
+                    container.innerHTML = "";
+
+                    if(!data) {
+                        container.innerHTML = "<p>Henüz hiç soru sorulmadı.</p>";
+                    } else {
+                        Object.values(data).forEach(q => {
+                            container.innerHTML += `
+                                <div class="q-card">
+                                    <div class="q-target">Kime: ${q.to}</div>
+                                    <div class="q-text">"${q.question}"</div>
+                                </div>
+                            `;
+                        });
+                    }
+                    switchPanel('panelAdmin');
+                });
+            }
+        });
+
+        // OYUNU SIFIRLAMA (YENİ TUR)
+        btnClear.addEventListener('click', () => {
+            if(confirm("Tüm oyuncuları ve soruları silmek istediğine emin misin?")) {
+                set(ref(db, '/'), null).then(() => {
+                    location.reload();
+                });
+            }
+        });
+    </script>
+</body>
+</html>
