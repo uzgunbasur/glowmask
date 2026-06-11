@@ -150,7 +150,6 @@
         const tabBox = document.getElementById('tabBox');
         const tabHome = document.getElementById('tabHome');
 
-        // Sekme geçiş butonlarını doğrudan dinleme (Hatayı çözen kısım)
         navBoxBtn.addEventListener('click', () => {
             tabBox.style.display = 'block';
             tabHome.style.display = 'none';
@@ -165,7 +164,7 @@
             navHomeBtn.classList.add('active');
         });
 
-        // 1. NİCK KAYIT VE GİRİŞ
+        // NİCK KAYIT VE GİRİŞ
         btnJoin.addEventListener('click', () => {
             const nick = document.getElementById('regName').value.trim();
             if(!nick) { alert("Geçerli bir nick gir!"); return; }
@@ -175,12 +174,124 @@
 
             set(ref(db, 'players/' + myNick), true).then(() => {
                 document.getElementById('panelRegister').style.display = 'none';
-                document.getElementById('gameArea').style.display = 'block'; // Tüm oyun alanını ve menüyü aç
+                document.getElementById('gameArea').style.display = 'block';
                 dinlemeyeBasla();
-            });
+            }).catch(err => alert("Giriş hatası: " + err));
         });
 
         function dinlemeyeBasla() {
             // OYUNCU LİSTESİ DİNLEME
             onValue(ref(db, 'players'), (snapshot) => {
-                const
+                const data = snapshot.val();
+                targetSelect.innerHTML = '<option value="" disabled selected>Birini Seç...</option>';
+                if(data) {
+                    Object.keys(data).forEach(player => {
+                        if(player !== myNick) {
+                            targetSelect.innerHTML += `<option value="${player}">${player}</option>`;
+                        }
+                    });
+                }
+            });
+
+            // KİŞİSEL KUTU DİNLEME (Sadece Cevaplanmamış Sorular)
+            onValue(ref(db, 'questions/' + myNick), (snapshot) => {
+                const data = snapshot.val();
+                myQuestionsContainer.innerHTML = "";
+
+                let unrepliedCount = 0;
+
+                if(data) {
+                    Object.keys(data).forEach(qId => {
+                        const q = data[qId];
+                        if(!q.reply) {
+                            unrepliedCount++;
+                            myQuestionsContainer.innerHTML += `
+                                <div class="q-card" id="card-${qId}">
+                                    <div class="q-text">"${q.question}"</div>
+                                    <input type="text" class="reply-input" id="input-${qId}" placeholder="Cevabını buraya yaz...">
+                                    <button class="btn" style="padding: 8px; font-size:0.85rem;" onclick="cevapla('${qId}', '${q.question.replace(/'/g, "\\'")}')">Cevapla & Paylaş</button>
+                                </div>
+                            `;
+                        }
+                    });
+                }
+
+                if(unrepliedCount === 0) {
+                    myQuestionsContainer.innerHTML = '<p class="no-q">Sana gelen yeni bir soru yok...</p>';
+                }
+            });
+
+            // TWITTER AKIŞI DİNLEME
+            onValue(ref(db, 'feed'), (snapshot) => {
+                const data = snapshot.val();
+                twitterFeedContainer.innerHTML = "";
+
+                if(!data) {
+                    twitterFeedContainer.innerHTML = '<p class="no-q">Henüz kimse bir soruyu cevaplamadı. Akış boş!</p>';
+                } else {
+                    const tweetList = Object.values(data).reverse();
+                    tweetList.forEach(t => {
+                        twitterFeedContainer.innerHTML += `
+                            <div class="tweet">
+                                <div class="tweet-header">
+                                    <div class="tweet-avatar"></div>
+                                    <div>
+                                        <span class="tweet-author">${t.author}</span>
+                                        <span class="tweet-username">@${t.author.toLowerCase()}</span>
+                                    </div>
+                                </div>
+                                <div class="tweet-body">
+                                    <div class="tweet-q">💬 Soru: "${t.question}"</div>
+                                </div>
+                                <div class="tweet-reply">📝 ${t.reply}</div>
+                            </div>
+                        `;
+                    });
+                }
+            });
+        }
+
+        // ANONİM SORU GÖNDERME
+        btnSend.addEventListener('click', () => {
+            const target = targetSelect.value;
+            const text = document.getElementById('questionText').value.trim();
+
+            if (!target) { alert("Kime soracağını seçmedin!"); return; }
+            if (!text) { alert("Soruyu boş bırakamazsın!"); return; }
+
+            const targetQuestionsRef = ref(db, 'questions/' + target);
+            const newQuestionRef = push(targetQuestionsRef);
+            
+            set(newQuestionRef, {
+                question: text,
+                reply: ""
+            }).then(() => {
+                document.getElementById('questionText').value = "";
+                targetSelect.selectedIndex = 0;
+                alert("Sorun gitmesi gereken yere tamamen anonim uçtu!");
+            });
+        });
+
+        // SORUYU CEVAPLAMA VE TWITTER AKIŞINA ATMA
+        window.cevapla = function(qId, originalQuestion) {
+            const replyText = document.getElementById(`input-${qId}`).value.trim();
+            if(!replyText) { alert("Boş cevap gönderemezsin!"); return; }
+
+            const myQRef = ref(db, `questions/${myNick}/${qId}`);
+            update(myQRef, { reply: replyText }).then(() => {
+                
+                const feedRef = ref(db, 'feed');
+                const newFeedRef = push(feedRef);
+                set(newFeedRef, {
+                    author: myNick,
+                    question: originalQuestion,
+                    reply: replyText
+                }).then(() => {
+                    alert("Cevaplandı ve Ana Sayfa akışına gönderildi!");
+                });
+
+            });
+        }
+    </script>
+</body>
+</html>
