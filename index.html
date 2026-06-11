@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GlowAsk - Kişisel Anonim Soru Kutun</title>
+    <title>GlowAsk - Anonim Soru & Cevap Akışı</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body {
@@ -13,26 +13,51 @@
         .container {
             background: rgba(13, 1, 22, 0.75); border: 2px solid #ff007f;
             box-shadow: 0 0 20px #ff007f, inset 0 0 15px rgba(255, 0, 127, 0.3), 0 0 40px #00f0ff;
-            border-radius: 16px; padding: 40px; max-width: 500px; width: 100%; text-align: center; backdrop-filter: blur(10px);
+            border-radius: 16px; padding: 30px; max-width: 550px; width: 100%; text-align: center; backdrop-filter: blur(10px);
+            position: relative;
         }
         h1 { font-size: 2.5rem; color: #00f0ff; text-shadow: 0 0 10px #00f0ff, 0 0 20px #00f0ff; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
         p.subtitle { color: #ff007f; text-shadow: 0 0 8px #ff007f; font-size: 0.9rem; margin-bottom: 25px; font-weight: bold; }
+        
+        /* Üst Menü */
+        .nav-menu { display: flex; gap: 10px; margin-bottom: 25px; }
+        .nav-btn { flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid #00f0ff; color: #00f0ff; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.3s; }
+        .nav-btn.active { background: #00f0ff; color: #05000a; box-shadow: 0 0 15px #00f0ff; }
+        .nav-btn.btn-home { border-color: #ff007f; color: #ff007f; }
+        .nav-btn.btn-home.active { background: #ff007f; color: #05000a; box-shadow: 0 0 15px #ff007f; }
+
         .panel { display: none; }
         .panel.active { display: block; }
+        
         label { display: block; margin-bottom: 8px; color: #00f0ff; text-align: left; font-weight: 600; }
-        input, select, textarea { width: 100%; padding: 12px; background: #120224; border: 2px solid #00f0ff; border-radius: 8px; color: #fff; font-size: 1rem; outline: none; margin-bottom: 20px; transition: all 0.3s; }
-        textarea { resize: none; height: 100px; border-color: #ff007f; }
+        input, select, textarea { width: 100%; padding: 12px; background: #120224; border: 2px solid #00f0ff; border-radius: 8px; color: #fff; font-size: 1rem; outline: none; margin-bottom: 15px; transition: all 0.3s; }
+        textarea { resize: none; height: 80px; border-color: #ff007f; }
         input:focus, select:focus { box-shadow: 0 0 15px #00f0ff; }
         textarea:focus { box-shadow: 0 0 15px #ff007f; }
-        .btn { width: 100%; padding: 14px; background: transparent; border: 2px solid #ff007f; color: #ff007f; border-radius: 8px; font-size: 1.1rem; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: all 0.3s ease; text-shadow: 0 0 5px #ff007f; }
-        .btn:hover { background: #ff007f; color: #05000a; box-shadow: 0 0 25px #ff007f; text-shadow: none; }
-        .btn-blue { border-color: #00f0ff; color: #00f0ff; text-shadow: 0 0 5px #00f0ff; }
-        .btn-blue:hover { background: #00f0ff; color: #05000a; box-shadow: 0 0 25px #00f0ff; text-shadow: none; }
         
-        .box-title { color: #ff007f; font-weight: bold; margin-top: 10px; margin-bottom: 15px; text-shadow: 0 0 5px #ff007f; text-transform: uppercase; }
-        .q-card { background: rgba(255, 255, 255, 0.05); border-left: 4px solid #00f0ff; padding: 15px; margin-bottom: 15px; text-align: left; border-radius: 4px; box-shadow: 0 0 10px rgba(0, 240, 255, 0.1); }
-        .q-text { color: #fff; font-size: 1.05rem; line-height: 1.4; }
-        .no-q { color: #666; font-style: italic; margin-top: 15px; }
+        .btn { width: 100%; padding: 12px; background: transparent; border: 2px solid #ff007f; color: #ff007f; border-radius: 8px; font-size: 1rem; font-weight: bold; text-transform: uppercase; cursor: pointer; transition: all 0.3s ease; text-shadow: 0 0 5px #ff007f; }
+        .btn:hover { background: #ff007f; color: #05000a; box-shadow: 0 0 20px #ff007f; text-shadow: none; }
+        .btn-blue { border-color: #00f0ff; color: #00f0ff; text-shadow: 0 0 5px #00f0ff; }
+        .btn-blue:hover { background: #00f0ff; color: #05000a; box-shadow: 0 0 20px #00f0ff; text-shadow: none; }
+        
+        .box-title { color: #ff007f; font-weight: bold; margin-top: 10px; margin-bottom: 15px; text-shadow: 0 0 5px #ff007f; text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* Gelen Soru Kutuları (Kişisel) */
+        .q-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(0, 240, 255, 0.3); padding: 15px; margin-bottom: 15px; text-align: left; border-radius: 8px; }
+        .q-text { color: #fff; font-size: 1.05rem; margin-bottom: 10px; font-style: italic; }
+        .reply-input { height: 60px; border-color: #00f0ff; margin-bottom: 10px; font-size: 0.9rem; }
+        
+        /* Twitter Akışı (Tweet Tasarımı) */
+        .tweet { background: rgba(18, 2, 36, 0.6); border: 1px solid rgba(255, 0, 127, 0.2); border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: left; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .tweet-header { display: flex; align-items: center; margin-bottom: 8px; }
+        .tweet-avatar { width: 36px; height: 36px; background: linear-gradient(45deg, #ff007f, #00f0ff); border-radius: 50%; margin-right: 10px; }
+        .tweet-author { font-weight: bold; color: #00f0ff; text-shadow: 0 0 5px rgba(0,240,255,0.3); }
+        .tweet-username { color: #666; font-size: 0.85rem; margin-left: 5px; }
+        .tweet-body { background: rgba(0,0,0,0.3); border-left: 3px solid #ff007f; padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+        .tweet-q { font-size: 0.95rem; color: #ccc; font-style: italic; }
+        .tweet-reply { font-size: 1.05rem; color: #fff; padding-left: 5px; line-height: 1.4; }
+        
+        .no-q { color: #555; font-style: italic; margin-top: 15px; }
     </style>
 
     <script type="importmap">
@@ -48,39 +73,50 @@
 
     <div class="container">
         <h1>GlowAsk</h1>
-        <p class="subtitle">Sana Özel Anonim Kutu</p>
+        <p class="subtitle">Canlı Anonim Soru & Twitter Akışı</p>
+
+        <div id="mainNav" class="nav-menu" style="display: none;">
+            <button id="navBoxBtn" class="nav-btn active" onclick="showTab('box')">Soru Kutum</button>
+            <button id="navHomeBtn" class="nav-btn btn-home" onclick="showTab('home')">🏠 Ana Sayfa (Akış)</button>
+        </div>
 
         <div id="panelRegister" class="panel active">
             <label for="regName">Oyundaki Nickin Nedir?</label>
-            <input type="text" id="regName" placeholder="Nickini yaz ve kutunu aç...">
-            <button class="btn btn-blue" id="btnJoin">Giriş Yap</button>
+            <input type="text" id="regName" placeholder="Nickini yaz ve giriş yap...">
+            <button class="btn btn-blue" id="btnJoin">Oyuna Katıl</button>
         </div>
 
-        <div id="panelMain" class="panel">
-            <h3 style="color: #00f0ff; margin-bottom: 20px;">Hoş geldin, <span id="currentMyNick" style="text-shadow: 0 0 8px #00f0ff;">-</span></h3>
+        <div id="tabBox" class="panel">
+            <h3 style="color: #00f0ff; margin-bottom: 15px; text-align: left;">Selam, <span id="currentMyNick" style="text-shadow: 0 0 8px #00f0ff;">-</span></h3>
             
-            <div style="border-bottom: 1px dashed rgba(255,0,127,0.3); padding-bottom: 20px; margin-bottom: 25px;">
+            <div style="border-bottom: 1px dashed rgba(255,0,127,0.2); padding-bottom: 15px; margin-bottom: 20px;">
                 <label for="targetSelect">Kime Anonim Soru Soracaksın?</label>
                 <select id="targetSelect">
                     <option value="" disabled selected>Oyuncular yükleniyor...</option>
                 </select>
-
-                <textarea id="questionText" placeholder="Kimsenin senin yazdığını bilmeyeceği o soruyu gönder..."></textarea>
-                <button class="btn" id="btnSend">Anonim Soru Gönder</button>
+                <textarea id="questionText" placeholder="Kimsenin bilmeyeceği o soruyu fırlat..."></textarea>
+                <button class="btn btn-blue" id="btnSend">Anonim Soru Gönder</button>
             </div>
 
             <div>
-                <div class="box-title">SANA GELEN ANONİM SORULAR</div>
+                <div class="box-title">Sana Gelen Sorular</div>
                 <div id="myQuestionsContainer">
-                    <p class="no-q">Henüz sana sorulan bir soru yok...</p>
+                    <p class="no-q">Henüz soru yok, beklemedeyiz...</p>
                 </div>
+            </div>
+        </div>
+
+        <div id="tabHome" class="panel">
+            <div class="box-title" style="color: #00f0ff; text-shadow: 0 0 5px #00f0ff; text-align: left; margin-bottom: 20px;">🔥 CANLI AKIŞ</div>
+            <div id="twitterFeedContainer">
+                <p class="no-q">Henüz kimse bir soruyu cevaplamadı. Akış boş!</p>
             </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "firebase/app";
-        import { getDatabase, ref, set, push, onValue } from "firebase/database";
+        import { getDatabase, ref, set, push, onValue, update } from "firebase/database";
 
         // Senin projene özel Firebase Config bilgileri
         const firebaseConfig = {
@@ -94,26 +130,35 @@
             measurementId: "G-11YF9FFS4Z"
         };
 
-        // Firebase Başlatma
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Değişkenler
         let myNick = "";
 
-        // Elementler
         const btnJoin = document.getElementById('btnJoin');
         const btnSend = document.getElementById('btnSend');
         const targetSelect = document.getElementById('targetSelect');
         const currentMyNick = document.getElementById('currentMyNick');
         const myQuestionsContainer = document.getElementById('myQuestionsContainer');
+        const twitterFeedContainer = document.getElementById('twitterFeedContainer');
 
-        function switchPanel(panelId) {
-            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-            document.getElementById(panelId).classList.add('active');
+        // Sekme Değiştirme Fonksiyonu
+        window.showTab = function(tabName) {
+            document.getElementById('tabBox').classList.remove('active');
+            document.getElementById('tabHome').classList.remove('active');
+            document.getElementById('navBoxBtn').classList.remove('active');
+            document.getElementById('navHomeBtn').classList.remove('active');
+
+            if(tabName === 'box') {
+                document.getElementById('tabBox').classList.add('active');
+                document.getElementById('navBoxBtn').classList.add('active');
+            } else if(tabName === 'home') {
+                document.getElementById('tabHome').classList.add('active');
+                document.getElementById('navHomeBtn').classList.add('active');
+            }
         }
 
-        // 1. NİCK İLE GİRİŞ YAPMA
+        // 1. NİCK KAYIT VE GİRİŞ
         btnJoin.addEventListener('click', () => {
             const nick = document.getElementById('regName').value.trim();
             if(!nick) { alert("Geçerli bir nick gir!"); return; }
@@ -121,22 +166,21 @@
             myNick = nick;
             currentMyNick.innerText = myNick;
 
-            // Oyuncu listesine ekle
-            const playersRef = ref(db, 'players/' + myNick);
-            set(playersRef, true).then(() => {
-                switchPanel('panelMain');
-                dinlemeyeBasla(); // Giriş yaptıktan sonra verileri dinle
-            }).catch(err => alert("Hata oluştu: " + err));
+            set(ref(db, 'players/' + myNick), true).then(() => {
+                document.getElementById('panelRegister').style.display = 'none';
+                document.getElementById('mainNav').style.display = 'flex';
+                document.getElementById('tabBox').classList.add('active');
+                dinlemeyeBasla();
+            });
         });
 
         function dinlemeyeBasla() {
-            // OYUNCU LİSTESİNİ CANLI GÜNCELLE
+            // OYUNCU LİSTESİ DİNLEME
             onValue(ref(db, 'players'), (snapshot) => {
                 const data = snapshot.val();
                 targetSelect.innerHTML = '<option value="" disabled selected>Birini Seç...</option>';
                 if(data) {
                     Object.keys(data).forEach(player => {
-                        // İnsanlar kendine soru sormasın diye kendi ismini listeden gizle
                         if(player !== myNick) {
                             targetSelect.innerHTML += `<option value="${player}">${player}</option>`;
                         }
@@ -144,19 +188,59 @@
                 }
             });
 
-            // SADECE GİRİŞ YAPAN KİŞİYE AİT SORULARI CANLI DİNLE
+            // KİŞİSEL KUTU DİNLEME (Sadece Cevaplanmamış Sorular)
             onValue(ref(db, 'questions/' + myNick), (snapshot) => {
                 const data = snapshot.val();
                 myQuestionsContainer.innerHTML = "";
 
+                let unrepliedCount = 0;
+
+                if(data) {
+                    Object.keys(data).forEach(qId => {
+                        const q = data[qId];
+                        // Eğer soru daha önce cevaplanmadıysa kutuda göster
+                        if(!q.reply) {
+                            unrepliedCount++;
+                            myQuestionsContainer.innerHTML += `
+                                <div class="q-card" id="card-${qId}">
+                                    <div class="q-text">"${q.question}"</div>
+                                    <input type="text" class="reply-input" id="input-${qId}" placeholder="Cevabını buraya yaz...">
+                                    <button class="btn btn-blue" style="padding: 6px; font-size:0.85rem;" onclick="cevapla('${qId}', '${q.question.replace(/'/g, "\\'")}')">Cevapla & Akışta Paylaş</button>
+                                </div>
+                            `;
+                        }
+                    });
+                }
+
+                if(unrepliedCount === 0) {
+                    myQuestionsContainer.innerHTML = '<p class="no-q">Sana gelen yeni bir soru yok...</p>';
+                }
+            });
+
+            // TWITTER AKIŞI DİNLEME (Tüm cevaplanan sorular buraya düşer)
+            onValue(ref(db, 'feed'), (snapshot) => {
+                const data = snapshot.val();
+                twitterFeedContainer.innerHTML = "";
+
                 if(!data) {
-                    myQuestionsContainer.innerHTML = '<p class="no-q">Henüz sana sorulan bir soru yok...</p>';
+                    twitterFeedContainer.innerHTML = '<p class="no-q">Henüz kimse bir soruyu cevaplamadı. Akış boş!</p>';
                 } else {
-                    // Soruları listele
-                    Object.values(data).forEach(q => {
-                        myQuestionsContainer.innerHTML += `
-                            <div class="q-card">
-                                <div class="q-text">"${q.question}"</div>
+                    // Tweetleri en yeni en üstte olacak şekilde ters çevirip listeliyoruz
+                    const tweetList = Object.values(data).reverse();
+                    tweetList.forEach(t => {
+                        twitterFeedContainer.innerHTML += `
+                            <div class="tweet">
+                                <div class="tweet-header">
+                                    <div class="tweet-avatar"></div>
+                                    <div>
+                                        <span class="tweet-author">${t.author}</span>
+                                        <span class="tweet-username">@${t.author.toLowerCase()}</span>
+                                    </div>
+                                </div>
+                                <div class="tweet-body">
+                                    <div class="tweet-q">💬 Soru: "${t.question}"</div>
+                                </div>
+                                <div class="tweet-reply">📝 ${t.reply}</div>
                             </div>
                         `;
                     });
@@ -172,18 +256,28 @@
             if (!target) { alert("Kime soracağını seçmedin!"); return; }
             if (!text) { alert("Soruyu boş bırakamazsın!"); return; }
 
-            // Soruyu direkt hedef kişinin düğümünün (node) altına gönderiyoruz (Güvenli yapı)
             const targetQuestionsRef = ref(db, 'questions/' + target);
             const newQuestionRef = push(targetQuestionsRef);
             
             set(newQuestionRef, {
-                question: text
+                question: text,
+                reply: "" // Başta boş
             }).then(() => {
                 document.getElementById('questionText').value = "";
                 targetSelect.selectedIndex = 0;
-                alert("Sorun " + target + " isimli kişiye tamamen anonim olarak gönderildi!");
+                alert("Sorun gitmesi gereken yere tamamen anonim uçtu!");
             });
         });
-    </script>
-</body>
-</html>
+
+        // 3. SORUYU CEVAPLAMA VE TWITTER AKIŞINA ATMA
+        window.cevapla = function(qId, originalQuestion) {
+            const replyText = document.getElementById(`input-${qId}`).value.trim();
+            if(!replyText) { alert("Boş cevap gönderemezsin!"); return; }
+
+            // Önce soruyu kendi kutumuzda cevaplandı olarak işaretleyelim (Kutudan kaybolacak)
+            const myQRef = ref(db, `questions/${myNick}/${qId}`);
+            update(myQRef, { reply: replyText }).then(() => {
+                
+                // Sonra bunu herkesin göreceği global Twitter Akışına (feed) pushlayalım
+                const feedRef = ref(db, 'feed');
+                const newFeedRef =
